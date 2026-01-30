@@ -1,18 +1,15 @@
 import axios from 'axios';
 
-/**
- * Axios instance configured for the backend API
- */
+// Use VITE_API_URL from environment, fallback to /api for local dev with proxy
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
 const api = axios.create({
-    baseURL: '/api',
+    baseURL: `${API_BASE_URL}/api`,
     headers: {
         'Content-Type': 'application/json'
     }
 });
 
-/**
- * Doctor API endpoints
- */
 export const doctorAPI = {
     create: (data) => api.post('/doctors', data),
     getAll: () => api.get('/doctors'),
@@ -20,9 +17,6 @@ export const doctorAPI = {
     update: (id, data) => api.put(`/doctors/${id}`, data)
 };
 
-/**
- * Slot API endpoints
- */
 export const slotAPI = {
     initialize: (doctorId, startHour, endHour) =>
         api.post('/slots/initialize', { doctorId, startHour, endHour }),
@@ -32,9 +26,6 @@ export const slotAPI = {
     getCurrent: (doctorId) => api.get(`/slots/${doctorId}/current`)
 };
 
-/**
- * Token API endpoints
- */
 export const tokenAPI = {
     book: (data) => api.post('/tokens/book', data),
     updateStatus: (tokenId, status) =>
@@ -44,9 +35,6 @@ export const tokenAPI = {
     markNoShow: (tokenId) => api.patch(`/tokens/${tokenId}/no-show`)
 };
 
-/**
- * Queue API endpoints
- */
 export const queueAPI = {
     get: (doctorId, date) => {
         const params = date ? { date } : {};
