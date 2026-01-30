@@ -1,17 +1,25 @@
 import Doctor from '../models/Doctor.js';
 
 /**
- * Create a new doctor
+ * Create a new doctor with availability schedule
  * POST /api/doctors
  */
 export const createDoctor = async (req, res, next) => {
     try {
-        const { name, specialty, averageConsultationTime } = req.body;
+        const {
+            name,
+            specialty,
+            consultationDuration,
+            availability,
+            workingDays
+        } = req.body;
 
         const doctor = new Doctor({
             name,
             specialty,
-            averageConsultationTime
+            consultationDuration,
+            availability,
+            workingDays
         });
 
         await doctor.save();
@@ -62,6 +70,43 @@ export const getDoctorById = async (req, res, next) => {
         res.status(200).json({
             success: true,
             data: doctor
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Update doctor schedule
+ * PUT /api/doctors/:id
+ */
+export const updateDoctor = async (req, res, next) => {
+    try {
+        const {
+            name,
+            specialty,
+            consultationDuration,
+            availability,
+            workingDays
+        } = req.body;
+
+        const doctor = await Doctor.findByIdAndUpdate(
+            req.params.id,
+            { name, specialty, consultationDuration, availability, workingDays },
+            { new: true, runValidators: true }
+        );
+
+        if (!doctor) {
+            return res.status(404).json({
+                success: false,
+                message: 'Doctor not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: doctor,
+            message: 'Doctor updated successfully'
         });
     } catch (error) {
         next(error);

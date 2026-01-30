@@ -1,4 +1,4 @@
-import { SlotService } from '../services/index.js';
+import { SlotService, SlotManager } from '../services/index.js';
 
 /**
  * Initialize daily slots for a doctor
@@ -25,6 +25,25 @@ export const initializeSlots = async (req, res, next) => {
             count: slots.length,
             data: slots,
             message: `${slots.length} slots created for today`
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Get available time slots for a doctor on a date
+ * GET /api/slots/available/:doctorId/:date
+ */
+export const getAvailableSlots = async (req, res, next) => {
+    try {
+        const { doctorId, date } = req.params;
+
+        const slotsData = await SlotManager.getAvailableSlots(doctorId, date);
+
+        res.status(200).json({
+            success: true,
+            data: slotsData
         });
     } catch (error) {
         next(error);

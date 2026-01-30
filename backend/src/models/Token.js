@@ -20,10 +20,23 @@ const tokenSchema = new mongoose.Schema({
         },
         required: [true, 'Patient type is required']
     },
+    doctorId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Doctor',
+        required: [true, 'Doctor ID is required']
+    },
     slotId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Slot',
-        required: [true, 'Slot ID is required']
+        ref: 'Slot'
+    },
+    appointmentDate: {
+        type: Date,
+        required: [true, 'Appointment date is required']
+    },
+    scheduledStartTime: {
+        type: String,
+        required: [true, 'Scheduled start time is required'],
+        match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)']
     },
     basePriority: {
         type: Number,
@@ -40,12 +53,17 @@ const tokenSchema = new mongoose.Schema({
             message: '{VALUE} is not a valid status'
         },
         default: 'Pending'
+    },
+    cancellationTime: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true
 });
 
 // Index for efficient queue queries
+tokenSchema.index({ doctorId: 1, appointmentDate: 1, scheduledStartTime: 1 });
 tokenSchema.index({ slotId: 1, finalPriorityScore: 1, createdAt: 1 });
 
 const Token = mongoose.model('Token', tokenSchema);

@@ -1,222 +1,192 @@
 import { useState, useEffect } from 'react';
-import BookingForm from './components/BookingForm';
-import DoctorQueue from './components/DoctorQueue';
-import { doctorAPI, slotAPI } from './api/client';
+import DoctorRegistrationView from './components/DoctorRegistrationView';
+import PatientBookingView from './components/PatientBookingView';
+import QueueDashboard from './components/QueueDashboard';
+import { Select } from './components/ui';
+import { doctorAPI } from './api/client';
 
-function App() {
+const TABS = [
+  { id: 'booking', label: 'Book Appointment', icon: '📅' },
+  { id: 'queue', label: 'Queue Dashboard', icon: '📋' },
+  { id: 'register', label: 'Register Doctor', icon: '👨‍⚕️' }
+];
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('booking');
   const [doctors, setDoctors] = useState([]);
-  const [selectedDoctor, setSelectedDoctor] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [showCreateDoctor, setShowCreateDoctor] = useState(false);
+  const [selectedDoctorId, setSelectedDoctorId] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Fetch doctors on mount
   useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const response = await doctorAPI.getAll();
+        setDoctors(response.data.data);
+        if (response.data.data.length > 0) {
+          setSelectedDoctorId(response.data.data[0]._id);
+        }
+      } catch (err) {
+        console.error('Failed to load doctors:', err);
+      }
+    };
     fetchDoctors();
   }, []);
 
-  const fetchDoctors = async () => {
+  const handleDoctorCreated = (doctor) => {
+    setDoctors(prev => [...prev, doctor]);
+    setSelectedDoctorId(doctor._id);
+    setActiveTab('booking');
+  };
+
+  const refreshDoctors = async () => {
     try {
       const response = await doctorAPI.getAll();
       setDoctors(response.data.data);
-      if (response.data.data.length > 0 && !selectedDoctor) {
-        setSelectedDoctor(response.data.data[0]);
-      }
     } catch (err) {
-      setError('Failed to fetch doctors. Make sure the backend is running.');
-    } finally {
-      setLoading(false);
+      console.error('Failed to refresh doctors:', err);
     }
   };
 
-  const handleCreateDoctor = async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-
-    try {
-      const response = await doctorAPI.create({
-        name: formData.get('name'),
-        specialty: formData.get('specialty'),
-        averageConsultationTime: parseInt(formData.get('consultationTime')) || 10
-      });
-
-      // Initialize slots for the new doctor
-      await slotAPI.initialize(response.data.data._id);
-
-      setDoctors([...doctors, response.data.data]);
-      setSelectedDoctor(response.data.data);
-      setShowCreateDoctor(false);
-      e.target.reset();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to create doctor');
-    }
-  };
-
-  const handleInitializeSlots = async () => {
-    if (!selectedDoctor) return;
-
-    try {
-      await slotAPI.initialize(selectedDoctor._id);
-      alert('Slots initialized successfully!');
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to initialize slots');
-    }
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    setMobileMenuOpen(false);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Background decoration */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl"></div>
-      </div>
-
-      <div className="relative z-10">
-        {/* Header */}
-        <header className="border-b border-slate-700/50 bg-slate-900/50 backdrop-blur-xl">
-          <div className="max-w-7xl mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/25">
-                  <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      {/* Header */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14 md:h-16">
+            {/* Logo */}
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="w-9 h-9 md:w-10 md:h-10 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-xl flex items-center justify-center transform rotate-45">
+                <div className="transform -rotate-45">
+                  <svg className="w-5 h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
                 </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-white">SlotSaarthi</h1>
-                  <p className="text-sm text-slate-400">OPD Token Allocation Engine</p>
-                </div>
               </div>
+              <div>
+                <h1 className="text-lg md:text-xl font-bold text-slate-800">
+                  <span className="text-teal-500">Slot</span>Saarthi
+                </h1>
+                <p className="text-xs text-slate-500 hidden sm:block">OPD Token Engine</p>
+              </div>
+            </div>
 
-              {/* Doctor Selector */}
-              <div className="flex items-center gap-4">
-                {doctors.length > 0 && (
-                  <select
-                    value={selectedDoctor?._id || ''}
-                    onChange={(e) => setSelectedDoctor(doctors.find(d => d._id === e.target.value))}
-                    className="px-4 py-2 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                  >
-                    {doctors.map((doctor) => (
-                      <option key={doctor._id} value={doctor._id} className="bg-slate-800">
-                        {doctor.name} - {doctor.specialty}
-                      </option>
-                    ))}
-                  </select>
-                )}
-
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex gap-6">
+              {TABS.map((tab) => (
                 <button
-                  onClick={() => setShowCreateDoctor(!showCreateDoctor)}
-                  className="px-4 py-2 bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 rounded-lg hover:bg-cyan-500/30 transition-colors"
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
+                    ? 'border-teal-500 text-teal-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                    }`}
                 >
-                  + Add Doctor
+                  {tab.label}
                 </button>
+              ))}
+            </nav>
 
-                {selectedDoctor && (
-                  <button
-                    onClick={handleInitializeSlots}
-                    className="px-4 py-2 bg-purple-500/20 border border-purple-500/30 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
-                  >
-                    Initialize Slots
-                  </button>
+            {/* Doctor Selector (Queue Tab) & Hamburger */}
+            <div className="flex items-center gap-3">
+              {activeTab === 'queue' && (
+                <div className="w-32 md:w-48">
+                  <Select
+                    value={selectedDoctorId}
+                    onChange={(e) => setSelectedDoctorId(e.target.value)}
+                    options={doctors.map(d => ({ value: d._id, label: d.name }))}
+                    placeholder="Doctor"
+                  />
+                </div>
+              )}
+
+              {/* Hamburger Menu Button - Mobile Only */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100"
+              >
+                {mobileMenuOpen ? (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
                 )}
-              </div>
+              </button>
             </div>
           </div>
-        </header>
+        </div>
+      </header>
 
-        {/* Create Doctor Form (Collapsible) */}
-        {showCreateDoctor && (
-          <div className="max-w-7xl mx-auto px-6 py-4">
-            <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Add New Doctor</h3>
-              <form onSubmit={handleCreateDoctor} className="flex gap-4 items-end">
-                <div className="flex-1">
-                  <label className="block text-sm text-slate-400 mb-1">Name</label>
-                  <input
-                    name="name"
-                    required
-                    placeholder="Dr. John Smith"
-                    className="w-full px-4 py-2 bg-slate-900/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="block text-sm text-slate-400 mb-1">Specialty</label>
-                  <input
-                    name="specialty"
-                    required
-                    placeholder="General Medicine"
-                    className="w-full px-4 py-2 bg-slate-900/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                  />
-                </div>
-                <div className="w-40">
-                  <label className="block text-sm text-slate-400 mb-1">Avg. Time (min)</label>
-                  <input
-                    name="consultationTime"
-                    type="number"
-                    defaultValue={10}
-                    min={1}
-                    className="w-full px-4 py-2 bg-slate-900/50 border border-slate-600/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="px-6 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg hover:from-cyan-400 hover:to-blue-500 transition-all"
-                >
-                  Create & Initialize
-                </button>
-              </form>
-            </div>
+      {/* Mobile Menu Dropdown */}
+      {mobileMenuOpen && (
+        <div className="md:hidden bg-white border-b border-slate-200 shadow-lg z-10">
+          <div className="px-4 py-2 space-y-1">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${activeTab === tab.id
+                  ? 'bg-teal-50 text-teal-700'
+                  : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+              >
+                <span className="text-lg">{tab.icon}</span>
+                <span className="font-medium">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
+        {activeTab === 'booking' && (
+          <div className="max-w-2xl mx-auto">
+            <PatientBookingView onBookingComplete={() => refreshDoctors()} />
           </div>
         )}
 
-        {/* Main Content */}
-        <main className="max-w-7xl mx-auto px-6 py-8">
-          {loading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="flex items-center gap-3">
-                <svg className="animate-spin h-8 w-8 text-cyan-400" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                <span className="text-slate-400">Loading...</span>
-              </div>
-            </div>
-          ) : error ? (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-8 text-center">
-              <p className="text-red-400">{error}</p>
-              <p className="text-sm text-slate-500 mt-2">
-                Make sure MongoDB is running and the backend server is started.
-              </p>
-            </div>
-          ) : (
-            <div className="grid lg:grid-cols-2 gap-8">
-              {/* Left Column - Booking Form */}
-              <div>
-                <BookingForm
-                  doctorId={selectedDoctor?._id}
-                  onBookingComplete={() => {
-                    // Queue will auto-refresh, but we can trigger immediate refresh
-                  }}
-                />
-              </div>
-
-              {/* Right Column - Queue Display */}
-              <div>
-                <DoctorQueue doctorId={selectedDoctor?._id} />
-              </div>
-            </div>
-          )}
-        </main>
-
-        {/* Footer */}
-        <footer className="border-t border-slate-700/50 mt-auto">
-          <div className="max-w-7xl mx-auto px-6 py-4 text-center text-slate-500 text-sm">
-            SlotSaarthi - OPD Token Allocation Engine
+        {activeTab === 'queue' && (
+          <div className="max-w-3xl mx-auto">
+            <QueueDashboard doctorId={selectedDoctorId} />
           </div>
-        </footer>
-      </div>
+        )}
+
+        {activeTab === 'register' && (
+          <div className="max-w-2xl mx-auto">
+            <DoctorRegistrationView onDoctorCreated={handleDoctorCreated} />
+          </div>
+        )}
+      </main>
+
+      {/* GitHub Floating Button */}
+      <a
+        href="https://github.com/KaranOps/SlotSaarthi"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 w-12 h-12 bg-slate-800 hover:bg-slate-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 z-30"
+        title="View on GitHub"
+      >
+        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+          <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
+        </svg>
+      </a>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-slate-200 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 md:py-4">
+          <p className="text-center text-xs md:text-sm text-slate-500">
+            <span className="text-teal-500 font-medium">Slot</span>Saarthi - Priority-Based OPD Scheduling
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
-
-export default App;
